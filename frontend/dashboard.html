@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAC.AI — Simulation Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --danger: #ff2d2d;
+  --danger-glow: rgba(255,45,45,0.4);
+  --safe: #00ff88;
+  --warning: #ffaa00;
+  --path: #00aaff;
+  --explored: #ffd700;
+  --bg: #050a0f;
+  --surface: #0a1520;
+  --surface2: #0f1e2d;
+  --surface3: #142230;
+  --border: rgba(0,170,255,0.15);
+  --border2: rgba(0,170,255,0.08);
+  --text: #e8f4ff;
+  --text-dim: #7a9bb5;
+  --node-normal: rgba(0,170,255,0.25);
+  --node-path: #00aaff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height: 52px;
+  background: rgba(5,10,15,0.95);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  backdrop-filter: blur(20px);
+  z-index: 100;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 4px;
+  color: var(--danger);
+  text-shadow: 0 0 15px var(--danger-glow);
+  text-decoration: none;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--safe);
+  letter-spacing: 1px;
+}
+
+.status-dot {
+  width: 6px; height: 6px;
+  background: var(--safe);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.5);opacity:0.5}
+}
+
+.topbar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.topbar-nav a {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+
+.topbar-nav a:hover, .topbar-nav a.active {
+  color: var(--path);
+  background: rgba(0,170,255,0.08);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ─── MAIN LAYOUT ─── */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ─── LEFT PANEL ─── */
+.left-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.left-panel::-webkit-scrollbar { width: 3px; }
+.left-panel::-webkit-scrollbar-track { background: transparent; }
+.left-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.panel-section {
+  border-bottom: 1px solid var(--border2);
+  padding: 16px;
+}
+
+.panel-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title::before {
+  content: '';
+  width: 3px; height: 12px;
+  background: var(--path);
+  border-radius: 1px;
+  display: inline-block;
+}
+
+/* Form Controls */
+label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 1px;
+}
+
+select, input[type="range"], input[type="number"] {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 8px 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+
+select:focus, input:focus {
+  border-color: var(--path);
+}
+
+select option { background: var(--surface2); }
+
+.range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+input[type="range"] {
+  padding: 0;
+  height: 4px;
+  cursor: pointer;
+  accent-color: var(--path);
+  flex: 1;
+  margin: 0;
+}
+
+.range-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--path);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  margin-bottom: 6px;
+}
+
+.btn-run {
+  background: var(--danger);
+  color: white;
+  box-shadow: 0 0 20px rgba(255,45,45,0.3);
+}
+
+.btn-run:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(255,45,45,0.5);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--path);
+  border: 1px solid var(--path);
+}
+
+.btn-outline:hover {
+  background: rgba(0,170,255,0.08);
+}
+
+.btn-warning {
+  background: transparent;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.btn-warning:hover {
+  background: rgba(255,170,0,0.08);
+}
+
+.btn-safe {
+  background: rgba(0,255,136,0.1);
+  color: var(--safe);
+  border: 1px solid rgba(0,255,136,0.3);
+}
+
+.btn-safe:hover {
+  background: rgba(0,255,136,0.15);
+}
+
+/* Mode toggles */
+.mode-btns {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.mode-btn.active {
+  background: rgba(0,170,255,0.1);
+  border-color: var(--path);
+  color: var(--path);
+}
+
+/* AI Suggestion Box */
+.suggestion-box {
+  background: rgba(0,255,136,0.05);
+  border: 1px solid rgba(0,255,136,0.2);
+  border-radius: 3px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.suggestion-box .s-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--safe);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.suggestion-box .s-algo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.suggestion-box .s-reason {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ─── CENTER CANVAS ─── */
+.canvas-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#city-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.canvas-overlay {
+  position: absolute;
+  top: 12px; left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.overlay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(5,10,15,0.85);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 6px 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  backdrop-filter: blur(10px);
+}
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-red { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.dot-green { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
+.dot-yellow { background: var(--explored); box-shadow: 0 0 6px var(--explored); }
+.dot-blue { background: var(--path); box-shadow: 0 0 6px var(--path); }
+.dot-white { background: #fff; }
+
+.interaction-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(5,10,15,0.85);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 8px 16px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+/* ─── RIGHT PANEL ─── */
+.right-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.right-panel::-webkit-scrollbar { width: 3px; }
+.right-panel::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Result Display */
+.result-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.result-algo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--path);
+  margin-bottom: 10px;
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border2);
+  font-size: 11px;
+}
+
+.result-row:last-child { border-bottom: none; }
+
+.result-key {
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.result-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.result-val.green { color: var(--safe); }
+.result-val.red { color: var(--danger); }
+.result-val.blue { color: var(--path); }
+.result-val.yellow { color: var(--warning); }
+
+/* Path display */
+.path-display {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  word-break: break-all;
+  line-height: 1.6;
+  max-height: 80px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+/* Log */
+.log-area {
+  background: var(--bg);
+  border-radius: 3px;
+  padding: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid var(--border2);
+}
+
+.log-entry { padding: 1px 0; }
+.log-entry.success { color: var(--safe); }
+.log-entry.error { color: var(--danger); }
+.log-entry.info { color: var(--path); }
+.log-entry.warn { color: var(--warning); }
+
+/* Loading spinner */
+.spinner {
+  display: none;
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--path);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Disaster buttons */
+.disaster-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.disaster-btn {
+  padding: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.disaster-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(255,45,45,0.05);
+}
+
+/* Mini map nodes */
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 4px 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+}
+
+.mini-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+</style>
+</head>
+<body>
+
+<!-- ─── TOPBAR ─── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="index.html" class="logo">EVAC.AI</a>
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <span>SYSTEM ONLINE</span>
+    </div>
+  </div>
+  <div class="topbar-nav">
+    <a href="index.html">HOME</a>
+    <a href="dashboard.html" class="active">DASHBOARD</a>
+    <a href="comparison.html">COMPARE</a>
+  </div>
+  <div class="topbar-right">
+    <span id="clock">--:--:--</span>
+    <span>|</span>
+    <span id="node-count">0 NODES</span>
+  </div>
+</div>
+
+<!-- ─── MAIN LAYOUT ─── -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- City Config -->
+    <div class="panel-section">
+      <div class="panel-title">City Configuration</div>
+      <label>GRID SIZE</label>
+      <div class="mode-btns" id="size-btns">
+        <div class="mode-btn active" onclick="setSize(8,8,this)">5×5</div>
+        <div class="mode-btn" onclick="setSize(10,10,this)">10×10</div>
+        <div class="mode-btn" onclick="setSize(15,15,this)">15×15</div>
+        <div class="mode-btn" onclick="setSize(20,20,this)">20×20</div>
+      </div>
+      
+      <label>DISASTER TYPE</label>
+      <select id="disaster-type">
+        <option value="fire">🔥 Fire</option>
+        <option value="flood">🌊 Flood</option>
+        <option value="earthquake">⚡ Earthquake</option>
+      </select>
+
+      <button class="btn btn-outline" onclick="generateCity()">⟳ GENERATE NEW CITY</button>
+    </div>
+
+    <!-- Interaction Mode -->
+    <div class="panel-section">
+      <div class="panel-title">Interaction Mode</div>
+      <div class="mode-btns">
+        <div class="mode-btn active" id="mode-start" onclick="setMode('start',this)">START</div>
+        <div class="mode-btn" id="mode-goal" onclick="setMode('goal',this)">GOAL</div>
+        <div class="mode-btn" id="mode-block" onclick="setMode('block',this)">BLOCK</div>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);font-family:'Space Mono',monospace;line-height:1.6">
+        Click on the map to set start point, add evacuation goals, or block roads.
+      </div>
+    </div>
+
+    <!-- Algorithm Selection -->
+    <div class="panel-section">
+      <div class="panel-title">Algorithm</div>
+      <select id="algo-select" onchange="onAlgoChange()">
+        <option value="bfs">BFS — Breadth-First Search</option>
+        <option value="dfs">DFS — Depth-First Search</option>
+        <option value="best_first">Best-First Search</option>
+        <option value="astar" selected>A* Search</option>
+        <option value="ao_star">AO* Search</option>
+        <option value="hill_climbing">Hill Climbing</option>
+        <option value="minimax">Minimax</option>
+        <option value="alpha_beta">Alpha-Beta Pruning</option>
+      </select>
+
+      <!-- Param panels -->
+      <div id="params-astar">
+        <label>HEURISTIC WEIGHT (w)</label>
+        <div class="range-wrap">
+          <input type="range" min="0.5" max="3" step="0.1" value="1.0" id="h-weight"
+            oninput="document.getElementById('h-weight-val').textContent=this.value">
+          <span class="range-val" id="h-weight-val">1.0</span>
+        </div>
+      </div>
+
+      <div id="params-dfs" style="display:none">
+        <label>DEPTH LIMIT</label>
+        <div class="range-wrap">
+          <input type="range" min="5" max="50" step="1" value="20" id="depth-limit"
+            oninput="document.getElementById('depth-limit-val').textContent=this.value">
+          <span class="range-val" id="depth-limit-val">20</span>
+        </div>
+      </div>
+
+      <div id="params-hill" style="display:none">
+        <label>MAX ITERATIONS</label>
+        <div class="range-wrap">
+          <input type="range" min="100" max="2000" step="100" value="500" id="hc-iters"
+            oninput="document.getElementById('hc-iters-val').textContent=this.value">
+          <span class="range-val" id="hc-iters-val">500</span>
+        </div>
+        <label>RANDOM RESTARTS</label>
+        <div class="range-wrap">
+          <input type="range" min="1" max="5" step="1" value="3" id="hc-restarts"
+            oninput="document.getElementById('hc-restarts-val').textContent=this.value">
+          <span class="range-val" id="hc-restarts-val">3</span>
+        </div>
+      </div>
+
+      <div id="params-adversarial" style="display:none">
+        <label>SEARCH DEPTH</label>
+        <div class="range-wrap">
+          <input type="range" min="2" max="8" step="1" value="4" id="search-depth"
+            oninput="document.getElementById('search-depth-val').textContent=this.value">
+          <span class="range-val" id="search-depth-val">4</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Suggestion -->
+    <div class="panel-section">
+      <div class="panel-title">AI Suggestion</div>
+      <div class="suggestion-box">
+        <div class="s-label">▲ RECOMMENDED</div>
+        <div class="s-algo" id="sugg-algo">A* SEARCH</div>
+        <div class="s-reason" id="sugg-reason">Loading city analysis...</div>
+      </div>
+      <button class="btn btn-safe" onclick="getSuggestion()">⚡ ANALYZE SCENARIO</button>
+    </div>
+
+    <!-- Run Button -->
+    <div class="panel-section">
+      <button class="btn btn-run" onclick="runAlgorithm()">▶ RUN SIMULATION</button>
+      <button class="btn btn-outline" onclick="clearResults()">✕ CLEAR</button>
+      <button class="btn btn-outline" style="color:var(--safe);border-color:var(--safe)" onclick="window.location.href='comparison.html'">≡ COMPARE ALL</button>
+    </div>
+
+    <!-- Disaster Controls -->
+    <div class="panel-section">
+      <div class="panel-title">Dynamic Disaster</div>
+      <div class="disaster-btns">
+        <button class="disaster-btn" onclick="triggerDisaster('fire')">🔥 SPREAD FIRE</button>
+        <button class="disaster-btn" onclick="triggerDisaster('flood')">🌊 FLOOD +</button>
+        <button class="disaster-btn" onclick="triggerDisaster('earthquake')">⚡ QUAKE</button>
+        <button class="disaster-btn" onclick="blockRoads()">🚧 BLOCK RDS</button>
+      </div>
+      <label>DISASTER INTENSITY</label>
+      <div class="range-wrap">
+        <input type="range" min="0.1" max="1.0" step="0.1" value="0.5" id="disaster-intensity"
+          oninput="document.getElementById('di-val').textContent=this.value">
+        <span class="range-val" id="di-val">0.5</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER CANVAS -->
+  <div class="canvas-area">
+    <canvas id="city-canvas"></canvas>
+
+    <div class="canvas-overlay">
+      <div class="overlay-badge"><div class="dot dot-white"></div> START</div>
+      <div class="overlay-badge"><div class="dot dot-green"></div> SHELTER</div>
+      <div class="overlay-badge"><div class="dot dot-red"></div> DANGER ZONE</div>
+      <div class="overlay-badge"><div class="dot dot-yellow"></div> EXPLORED</div>
+      <div class="overlay-badge"><div class="dot dot-blue"></div> FINAL PATH</div>
+    </div>
+
+    <div class="interaction-hint" id="hint-text">
+      Click map to set start → goal → block roads | Mode: <span id="mode-display">START</span>
+    </div>
+
+    <!-- Spinner overlay -->
+    <div id="loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(5,10,15,0.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+      <div class="spinner" style="display:block;width:32px;height:32px;border-width:3px"></div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--path);letter-spacing:2px" id="loading-text">COMPUTING...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- Results -->
+    <div class="panel-section">
+      <div class="panel-title">Results</div>
+      <div id="result-container">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:20px">
+          Run a simulation to see results
+        </div>
+      </div>
+    </div>
+
+    <!-- City Stats -->
+    <div class="panel-section">
+      <div class="panel-title">City Statistics</div>
+      <div class="mini-stat">
+        <span style="min-width:50px">DANGER</span>
+        <div class="mini-bar"><div class="mini-bar-fill" id="bar-danger" style="width:30%;background:var(--danger)"></div></div>
+        <span id="stat-danger-val" style="min-width:28px;text-align:right;color:var(--danger)">—</span>
+      </div>
+      <div class="mini-stat">
+        <span style="min-width:50px">CONG</span>
+        <div class="mini-bar"><div class="mini-bar-fill" id="bar-cong" style="width:20%;background:var(--warning)"></div></div>
+        <span id="stat-cong-val" style="min-width:28px;text-align:right;color:var(--warning)">—</span>
+      </div>
+      <div class="mini-stat">
+        <span style="min-width:50px">SAFE</span>
+        <div class="mini-bar"><div class="mini-bar-fill" id="bar-safe" style="width:80%;background:var(--safe)"></div></div>
+        <span id="stat-safe-val" style="min-width:28px;text-align:right;color:var(--safe)">—</span>
+      </div>
+    </div>
+
+    <!-- Path Display -->
+    <div class="panel-section">
+      <div class="panel-title">Path Sequence</div>
+      <div class="path-display" id="path-display">No path computed yet.</div>
+      <button class="btn btn-outline" onclick="exportResults()" style="margin-bottom:0">↓ EXPORT JSON</button>
+    </div>
+
+    <!-- Log -->
+    <div class="panel-section" style="flex:1">
+      <div class="panel-title">System Log</div>
+      <div class="log-area" id="log-area">
+        <div class="log-entry info">[SYS] EVAC.AI initialized</div>
+        <div class="log-entry info">[SYS] Click "Generate City" to begin</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:5000';
+
+// ─── STATE ───
+let cityData = null;
+let nodePositions = {}; // {id: {x,y}} in canvas coords
+let currentMode = 'start';
+let startNode = null;
+let goalNodes = [];
+let blockedNodes = new Set();
+let lastResult = null;
+let cityRows = 8, cityCols = 8;
+let animState = { explored: [], path: [], step: 0, running: false };
+
+const canvas = document.getElementById('city-canvas');
+const ctx = canvas.getContext('2d');
+
+// ─── CLOCK ───
+setInterval(() => {
+  document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
+}, 1000);
+
+// ─── RESIZE ───
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  if (cityData) computeCanvasPositions();
+  drawCity();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ─── GENERATE CITY ───
+async function generateCity() {
+  log('Generating city...', 'info');
+  const disasterType = document.getElementById('disaster-type').value;
+  
+  try {
+    const res = await fetch(`${API}/generate-city`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ rows: cityRows, cols: cityCols, disaster_type: disasterType })
+    });
+    const data = await res.json();
+    cityData = data.city;
+    startNode = 0;
+    goalNodes = cityData.shelters.map(Number);
+    blockedNodes = new Set();
+    
+    computeCanvasPositions();
+    drawCity();
+    updateStats();
+    log(`City generated: ${cityRows}×${cityCols} grid, disaster: ${disasterType}`, 'success');
+    document.getElementById('node-count').textContent = `${cityRows * cityCols} NODES`;
+    getSuggestion();
+  } catch(e) {
+    log('Backend not running. Using demo mode.', 'warn');
+    generateDemoCity();
+  }
+}
+
+function generateDemoCity() {
+  // Client-side demo city when backend unavailable
+  const rows = cityRows, cols = cityCols;
+  const graph = {};
+  const node_positions = {};
+  const risk_factors = {};
+  const congestion = {};
+  const node_types = {};
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const id = r * cols + c;
+      node_positions[id] = [c * 60 + 30, r * 60 + 30];
+      graph[id] = [];
+      risk_factors[id] = 0;
+      congestion[id] = Math.random() * 0.2;
+      node_types[id] = 'normal';
+    }
+  }
+  
+  // Fire zone
+  const fc = Math.floor(cols / 3), fr = Math.floor(rows / 3);
+  for (let r = Math.max(0, fr-1); r < Math.min(rows, fr+3); r++) {
+    for (let c = Math.max(0, fc-1); c < Math.min(cols, fc+3); c++) {
+      const id = r * cols + c;
+      const dist = Math.abs(r-fr) + Math.abs(c-fc);
+      risk_factors[id] = Math.max(0, 1 - dist * 0.3);
+      if (dist <= 1) node_types[id] = 'danger';
+    }
+  }
+
+  // Shelters at right edge
+  const shelters = [
+    cols - 1,
+    Math.floor(rows/2) * cols + cols - 1,
+    (rows-1) * cols + cols - 1
+  ];
+  shelters.forEach(s => { node_types[s] = 'shelter'; risk_factors[s] = 0; });
+
+  // Edges
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const id = r * cols + c;
+      if (c + 1 < cols) { graph[id].push([r*cols+c+1, 60, risk_factors[r*cols+c+1]]); }
+      if (r + 1 < rows) { graph[id].push([(r+1)*cols+c, 60, risk_factors[(r+1)*cols+c]]); }
+      if (c > 0) { graph[id].push([r*cols+c-1, 60, risk_factors[r*cols+c-1]]); }
+      if (r > 0) { graph[id].push([(r-1)*cols+c, 60, risk_factors[(r-1)*cols+c]]); }
+    }
+  }
+
+  cityData = { graph, node_positions, risk_factors, congestion, node_types, shelters, rows, cols };
+  startNode = 0;
+  goalNodes = shelters.map(Number);
+  blockedNodes = new Set();
+
+  computeCanvasPositions();
+  drawCity();
+  updateStats();
+  document.getElementById('node-count').textContent = `${rows * cols} NODES`;
+  log('Demo city loaded (backend offline mode)', 'warn');
+  document.getElementById('sugg-algo').textContent = 'A* SEARCH';
+  document.getElementById('sugg-reason').textContent = 'A* is optimal for most evacuation scenarios.';
+}
+
+// ─── CANVAS POSITIONS ───
+function computeCanvasPositions() {
+  if (!cityData) return;
+  const pad = 40;
+  const W = canvas.width - pad * 2;
+  const H = canvas.height - pad * 2;
+  const rows = cityData.rows || cityRows;
+  const cols = cityData.cols || cityCols;
+
+  nodePositions = {};
+  Object.entries(cityData.node_positions).forEach(([id, pos]) => {
+    // pos is [col*60+30, row*60+30] — normalize to canvas
+    const c = (pos[0] - 30) / 60;
+    const r = (pos[1] - 30) / 60;
+    nodePositions[id] = {
+      x: pad + (c / (cols - 1)) * W,
+      y: pad + (r / (rows - 1)) * H
+    };
+  });
+}
+
+// ─── DRAW CITY ───
+function drawCity(exploredSet = new Set(), pathSet = []) {
+  if (!cityData) return;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#050a0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid background
+  ctx.strokeStyle = 'rgba(0,170,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 30) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 30) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  // Draw edges
+  Object.entries(cityData.graph).forEach(([nodeId, neighbors]) => {
+    const pos = nodePositions[nodeId];
+    if (!pos) return;
+    neighbors.forEach(([neighborId]) => {
+      const nPos = nodePositions[neighborId];
+      if (!nPos) return;
+      if (blockedNodes.has(parseInt(nodeId)) || blockedNodes.has(neighborId)) return;
+
+      // Check if edge is on path
+      const onPath = pathSet.includes(parseInt(nodeId)) && pathSet.includes(neighborId);
+      if (onPath) {
+        ctx.strokeStyle = 'rgba(0,170,255,0.7)';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#00aaff';
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.strokeStyle = 'rgba(0,170,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+      }
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.lineTo(nPos.x, nPos.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
+  });
+
+  // Draw nodes
+  Object.entries(nodePositions).forEach(([id, pos]) => {
+    const idNum = parseInt(id);
+    const nodeType = cityData.node_types?.[id] || cityData.node_types?.[idNum] || 'normal';
+    const risk = cityData.risk_factors?.[id] ?? cityData.risk_factors?.[idNum] ?? 0;
+
+    let color, size = 5, glow = 0, glowColor = '';
+
+    if (blockedNodes.has(idNum)) {
+      color = '#333'; size = 5;
+    } else if (idNum === startNode) {
+      color = '#ffffff'; size = 9; glow = 15; glowColor = '#ffffff';
+    } else if (goalNodes.includes(idNum)) {
+      color = '#00ff88'; size = 9; glow = 18; glowColor = '#00ff88';
+    } else if (pathSet.includes(idNum)) {
+      color = '#00aaff'; size = 7; glow = 12; glowColor = '#00aaff';
+    } else if (exploredSet.has(idNum)) {
+      color = 'rgba(255,215,0,0.7)'; size = 5;
+    } else if (nodeType === 'danger') {
+      color = '#ff2d2d'; size = 6; glow = 10; glowColor = '#ff2d2d';
+    } else if (risk > 0.3) {
+      const r = 255, g = Math.floor(200 - risk * 200), b = 0;
+      color = `rgba(${r},${g},${b},0.8)`; size = 5;
+    } else {
+      color = 'rgba(0,170,255,0.35)'; size = 4;
+    }
+
+    if (glow > 0) { ctx.shadowColor = glowColor; ctx.shadowBlur = glow; }
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Labels for special nodes
+    if (idNum === startNode) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.font = 'bold 10px Space Mono, monospace';
+      ctx.fillText('S', pos.x - 3, pos.y - 12);
+    } else if (goalNodes.includes(idNum)) {
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 9px Space Mono, monospace';
+      ctx.fillText('G', pos.x - 3, pos.y - 12);
+    }
+  });
+}
+
+// ─── CANVAS CLICK ───
+canvas.addEventListener('click', (e) => {
+  if (!cityData) { log('Generate a city first', 'warn'); return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // Find closest node
+  let closestId = null, closestDist = Infinity;
+  Object.entries(nodePositions).forEach(([id, pos]) => {
+    const d = Math.hypot(pos.x - mx, pos.y - my);
+    if (d < closestDist) { closestDist = d; closestId = parseInt(id); }
+  });
+
+  if (closestId === null || closestDist > 40) return;
+
+  if (currentMode === 'start') {
+    startNode = closestId;
+    log(`Start set: Node ${closestId}`, 'info');
+  } else if (currentMode === 'goal') {
+    if (!goalNodes.includes(closestId)) {
+      goalNodes.push(closestId);
+      log(`Goal added: Node ${closestId}`, 'success');
+    } else {
+      goalNodes = goalNodes.filter(g => g !== closestId);
+      log(`Goal removed: Node ${closestId}`, 'warn');
+    }
+  } else if (currentMode === 'block') {
+    if (blockedNodes.has(closestId)) {
+      blockedNodes.delete(closestId);
+      log(`Road unblocked: Node ${closestId}`, 'info');
+    } else {
+      blockedNodes.add(closestId);
+      log(`Road blocked: Node ${closestId}`, 'warn');
+    }
+  }
+  drawCity();
+});
+
+// ─── MODE ───
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mode-display').textContent = mode.toUpperCase();
+}
+
+// ─── SIZE ───
+function setSize(r, c, btn) {
+  cityRows = r; cityCols = c;
+  document.querySelectorAll('#size-btns .mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── ALGO CHANGE ───
+function onAlgoChange() {
+  const algo = document.getElementById('algo-select').value;
+  document.getElementById('params-astar').style.display = algo === 'astar' ? 'block' : 'none';
+  document.getElementById('params-dfs').style.display = algo === 'dfs' ? 'block' : 'none';
+  document.getElementById('params-hill').style.display = algo === 'hill_climbing' ? 'block' : 'none';
+  document.getElementById('params-adversarial').style.display =
+    ['minimax', 'alpha_beta'].includes(algo) ? 'block' : 'none';
+}
+
+// ─── RUN ALGORITHM ───
+async function runAlgorithm() {
+  if (!cityData) { generateCity(); return; }
+  if (goalNodes.length === 0) { log('Set at least one goal node', 'warn'); return; }
+
+  const algo = document.getElementById('algo-select').value;
+  const params = {};
+  
+  if (algo === 'astar') params.heuristic_weight = parseFloat(document.getElementById('h-weight').value);
+  if (algo === 'dfs') params.depth_limit = parseInt(document.getElementById('depth-limit').value);
+  if (algo === 'hill_climbing') {
+    params.iterations = parseInt(document.getElementById('hc-iters').value);
+    params.restarts = parseInt(document.getElementById('hc-restarts').value);
+  }
+  if (['minimax', 'alpha_beta'].includes(algo)) {
+    params.max_depth = parseInt(document.getElementById('search-depth').value);
+  }
+
+  showLoading(true, `Running ${algo.toUpperCase()}...`);
+  log(`Running ${algo} from node ${startNode} to ${goalNodes}...`, 'info');
+
+  try {
+    const res = await fetch(`${API}/run-algorithm`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        algorithm: algo,
+        start: startNode,
+        goals: goalNodes,
+        params
+      })
+    });
+    const data = await res.json();
+    showLoading(false);
+
+    if (data.error) { log(`Error: ${data.error}`, 'error'); return; }
+    
+    lastResult = data.result;
+    displayResult(data.result);
+    animatePath(data.result.path || []);
+    log(`✓ ${data.result.algorithm}: ${data.result.found ? 'PATH FOUND' : 'NO PATH'} | Cost: ${data.result.cost} | Nodes: ${data.result.nodes_explored}`, data.result.found ? 'success' : 'error');
+  } catch(e) {
+    showLoading(false);
+    log('Backend offline. Running demo algorithm...', 'warn');
+    runDemoAlgorithm(algo);
+  }
+}
+
+function runDemoAlgorithm(algo) {
+  // Simple BFS demo when backend is offline
+  if (!cityData || goalNodes.length === 0) return;
+  
+  const graph = cityData.graph;
+  const queue = [[startNode, [startNode]]];
+  const visited = new Set([startNode]);
+  const goalSet = new Set(goalNodes);
+  let result = null;
+  let nodesExplored = 0;
+
+  while (queue.length > 0) {
+    const [curr, path] = queue.shift();
+    nodesExplored++;
+    if (goalSet.has(curr)) { result = path; break; }
+    const neighbors = (graph[curr] || graph[String(curr)] || []);
+    for (const [neighbor] of neighbors) {
+      const nid = parseInt(neighbor);
+      if (!visited.has(nid) && !blockedNodes.has(nid)) {
+        visited.add(nid);
+        queue.push([nid, [...path, nid]]);
+      }
+    }
+  }
+
+  const mockResult = {
+    algorithm: algo.toUpperCase() + ' (Demo)',
+    path: result || [],
+    cost: result ? result.length * 60 : -1,
+    nodes_explored: nodesExplored,
+    time_ms: Math.random() * 5,
+    memory_kb: Math.random() * 50,
+    found: !!result
+  };
+  
+  lastResult = mockResult;
+  displayResult(mockResult);
+  animatePath(mockResult.path);
+  log(`Demo: ${mockResult.found ? 'Path found! Length: ' + mockResult.path.length : 'No path found'}`, mockResult.found ? 'success' : 'error');
+}
+
+// ─── ANIMATE PATH ───
+function animatePath(path) {
+  if (!path || path.length === 0) { drawCity(); return; }
+  
+  let step = 0;
+  const explored = new Set();
+
+  function step_fn() {
+    if (step <= path.length) {
+      // Add nodes progressively
+      const currentShown = path.slice(0, step);
+      currentShown.forEach(n => explored.add(n));
+      drawCity(explored, currentShown);
+      step++;
+      setTimeout(step_fn, 60);
+    } else {
+      drawCity(explored, path);
+    }
+  }
+  step_fn();
+}
+
+// ─── DISPLAY RESULT ───
+function displayResult(result) {
+  const container = document.getElementById('result-container');
+  const costDisplay = result.cost === -1 ? '∞' : result.cost?.toFixed(1);
+  
+  container.innerHTML = `
+    <div class="result-card">
+      <div class="result-algo">${result.algorithm}</div>
+      <div class="result-row">
+        <span class="result-key">STATUS</span>
+        <span class="result-val ${result.found ? 'green' : 'red'}">${result.found ? '✓ FOUND' : '✕ NOT FOUND'}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">PATH LENGTH</span>
+        <span class="result-val blue">${result.path?.length || 0} nodes</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">TOTAL COST</span>
+        <span class="result-val yellow">${costDisplay}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">NODES EXPLORED</span>
+        <span class="result-val">${result.nodes_explored}</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">TIME</span>
+        <span class="result-val blue">${result.time_ms?.toFixed(3)} ms</span>
+      </div>
+      <div class="result-row">
+        <span class="result-key">MEMORY</span>
+        <span class="result-val">${result.memory_kb?.toFixed(1)} KB</span>
+      </div>
+      ${result.pruned_branches !== undefined ? `
+      <div class="result-row">
+        <span class="result-key">PRUNED</span>
+        <span class="result-val green">${result.pruned_branches} branches</span>
+      </div>` : ''}
+    </div>
+  `;
+
+  // Path display
+  const pathStr = result.path?.length > 0
+    ? result.path.join(' → ')
+    : 'No path found';
+  document.getElementById('path-display').textContent = pathStr;
+}
+
+// ─── DISASTER ───
+async function triggerDisaster(type) {
+  const intensity = parseFloat(document.getElementById('disaster-intensity').value);
+  log(`Triggering ${type} disaster (intensity: ${intensity})...`, 'warn');
+  
+  try {
+    const res = await fetch(`${API}/simulate-disaster`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ disaster_type: type, intensity })
+    });
+    const data = await res.json();
+    cityData = data.city;
+    computeCanvasPositions();
+    drawCity();
+    updateStats();
+    log(`🔥 Disaster applied: ${type} at intensity ${intensity}`, 'warn');
+  } catch(e) {
+    // Demo: increase risk of random nodes
+    if (cityData) {
+      Object.keys(cityData.risk_factors).forEach(id => {
+        if (Math.random() < 0.1) {
+          cityData.risk_factors[id] = Math.min(1, (cityData.risk_factors[id] || 0) + 0.3);
+          if (cityData.risk_factors[id] > 0.7) cityData.node_types[id] = 'danger';
+        }
+      });
+      drawCity();
+      log('Demo disaster applied (backend offline)', 'warn');
+    }
+  }
+}
+
+async function blockRoads() {
+  try {
+    const res = await fetch(`${API}/update-map`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ change_type: 'block_road' })
+    });
+    const data = await res.json();
+    cityData = data.city;
+    computeCanvasPositions();
+    drawCity();
+    log('Roads blocked randomly', 'warn');
+  } catch(e) {
+    log('Demo: roads blocked (backend offline)', 'warn');
+  }
+}
+
+// ─── SUGGESTION ───
+async function getSuggestion() {
+  try {
+    const res = await fetch(`${API}/suggest`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ num_goals: goalNodes.length })
+    });
+    const data = await res.json();
+    document.getElementById('sugg-algo').textContent = data.suggested_algorithm.toUpperCase();
+    document.getElementById('sugg-reason').textContent = data.reason;
+  } catch(e) {
+    document.getElementById('sugg-algo').textContent = 'A* SEARCH';
+    document.getElementById('sugg-reason').textContent = 'Optimal for most evacuation scenarios. Balances speed and path quality.';
+  }
+}
+
+// ─── HELPERS ───
+function showLoading(show, text = 'COMPUTING...') {
+  const overlay = document.getElementById('loading-overlay');
+  overlay.style.display = show ? 'flex' : 'none';
+  document.getElementById('loading-text').textContent = text;
+}
+
+function clearResults() {
+  document.getElementById('result-container').innerHTML = '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:var(--text-dim);text-align:center;padding:20px">Run a simulation to see results</div>';
+  document.getElementById('path-display').textContent = 'No path computed yet.';
+  drawCity();
+  log('Results cleared', 'info');
+}
+
+function updateStats() {
+  if (!cityData) return;
+  const risks = Object.values(cityData.risk_factors).map(Number);
+  const avg = risks.reduce((a,b) => a+b, 0) / risks.length;
+  const dangCount = risks.filter(r => r > 0.5).length;
+  const safeCount = risks.filter(r => r < 0.1).length;
+  
+  document.getElementById('bar-danger').style.width = (avg * 100) + '%';
+  document.getElementById('stat-danger-val').textContent = Math.round(avg * 100) + '%';
+  document.getElementById('bar-cong').style.width = '25%';
+  document.getElementById('stat-cong-val').textContent = '25%';
+  document.getElementById('bar-safe').style.width = (safeCount / risks.length * 100) + '%';
+  document.getElementById('stat-safe-val').textContent = Math.round(safeCount / risks.length * 100) + '%';
+}
+
+function log(msg, type = 'info') {
+  const area = document.getElementById('log-area');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type}`;
+  entry.textContent = `[${new Date().toTimeString().slice(0,8)}] ${msg}`;
+  area.appendChild(entry);
+  area.scrollTop = area.scrollHeight;
+}
+
+function exportResults() {
+  if (!lastResult) { log('No results to export', 'warn'); return; }
+  const data = JSON.stringify({ result: lastResult, city_info: { rows: cityRows, cols: cityCols } }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `evac_result_${Date.now()}.json`;
+  a.click();
+  log('Results exported', 'success');
+}
+
+// ─── INIT ───
+resizeCanvas();
+generateCity();
+</script>
+</body>
+</html>
