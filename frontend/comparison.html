@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAC.AI — Algorithm Comparison</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --danger: #ff2d2d;
+  --safe: #00ff88;
+  --warning: #ffaa00;
+  --path: #00aaff;
+  --purple: #aa55ff;
+  --bg: #050a0f;
+  --surface: #0a1520;
+  --surface2: #0f1e2d;
+  --border: rgba(0,170,255,0.15);
+  --border2: rgba(0,170,255,0.08);
+  --text: #e8f4ff;
+  --text-dim: #7a9bb5;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,170,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,170,255,0.03) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height: 52px;
+  background: rgba(5,10,15,0.95);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 4px;
+  color: var(--danger);
+  text-shadow: 0 0 15px rgba(255,45,45,0.4);
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+
+.nav-links a:hover, .nav-links a.active {
+  color: var(--path);
+  background: rgba(0,170,255,0.08);
+}
+
+/* ─── MAIN ─── */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── HEADER ─── */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 52px;
+  letter-spacing: 4px;
+  line-height: 1;
+}
+
+.page-title span {
+  color: var(--path);
+  font-size: 32px;
+  display: block;
+  letter-spacing: 2px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--danger);
+  color: white;
+  box-shadow: 0 0 20px rgba(255,45,45,0.3);
+}
+
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(255,45,45,0.5); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--path);
+  border: 1px solid var(--path);
+}
+
+.btn-outline:hover { background: rgba(0,170,255,0.08); }
+
+/* Config Bar */
+.config-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.config-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.config-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 7px 12px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+/* ─── SUMMARY CARDS ─── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 16px;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.summary-card:hover { border-color: rgba(0,170,255,0.3); }
+
+.sc-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 2px;
+  line-height: 1.1;
+}
+
+.sc-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.sc-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+/* ─── CHARTS GRID ─── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.chart-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.chart-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 220px;
+}
+
+/* ─── DATA TABLE ─── */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+
+.table-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 3px;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+}
+
+th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border2);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+tr:hover td { background: rgba(0,170,255,0.03); }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.badge-green { background: rgba(0,255,136,0.1); color: var(--safe); border: 1px solid rgba(0,255,136,0.2); }
+.badge-red { background: rgba(255,45,45,0.1); color: var(--danger); border: 1px solid rgba(255,45,45,0.2); }
+.badge-yellow { background: rgba(255,170,0,0.1); color: var(--warning); border: 1px solid rgba(255,170,0,0.2); }
+.badge-blue { background: rgba(0,170,255,0.1); color: var(--path); border: 1px solid rgba(0,170,255,0.2); }
+
+.best-cell { color: var(--safe); font-weight: 700; }
+.worst-cell { color: var(--danger); }
+
+/* Rank medal */
+.rank {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.rank-1 { color: #ffd700; }
+.rank-2 { color: #c0c0c0; }
+.rank-3 { color: #cd7f32; }
+
+/* ─── RADAR CHART ─── */
+.radar-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+/* Loading state */
+.loading-state {
+  text-align: center;
+  padding: 60px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 24px; height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--path);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Score bar */
+.score-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.score-bar-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  width: 90px;
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+
+.score-bar-track {
+  flex: 1;
+  height: 5px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease;
+}
+
+.score-bar-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .radar-section { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="index.html" class="logo">EVAC.AI</a>
+  <ul class="nav-links">
+    <li><a href="index.html">HOME</a></li>
+    <li><a href="dashboard.html">DASHBOARD</a></li>
+    <li><a href="comparison.html" class="active">COMPARE</a></li>
+  </ul>
+</div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-title">
+      ALGORITHM<br>COMPARISON
+      <span>// ALL 8 ALGORITHMS — HEAD TO HEAD</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="runComparison()">▶ RUN ALL ALGORITHMS</button>
+      <button class="btn btn-outline" onclick="exportData()">↓ EXPORT CSV</button>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <div class="config-bar">
+    <div class="config-group">
+      <span class="config-label">CITY SIZE</span>
+      <select id="comp-size" onchange="onSizeChange()">
+        <option value="small">Small (8×8)</option>
+        <option value="medium" selected>Medium (10×10)</option>
+        <option value="large">Large (15×15)</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <span class="config-label">DISASTER</span>
+      <select id="comp-disaster">
+        <option value="fire">Fire</option>
+        <option value="flood">Flood</option>
+        <option value="earthquake">Earthquake</option>
+      </select>
+    </div>
+    <div class="config-group">
+      <span class="config-label">METRIC</span>
+      <select id="sort-metric" onchange="sortTable()">
+        <option value="time_ms">Time (ms)</option>
+        <option value="cost">Path Cost</option>
+        <option value="nodes_explored">Nodes Explored</option>
+        <option value="memory_kb">Memory (KB)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid" id="summary-cards">
+    <div class="summary-card"><div class="sc-val" style="color:var(--safe)">—</div><div class="sc-label">FASTEST ALGORITHM</div><div class="sc-sub" id="fastest-name">—</div></div>
+    <div class="summary-card"><div class="sc-val" style="color:var(--path)">—</div><div class="sc-label">OPTIMAL PATH</div><div class="sc-sub" id="optimal-name">—</div></div>
+    <div class="summary-card"><div class="sc-val" style="color:var(--warning)">—</div><div class="sc-label">LEAST MEMORY</div><div class="sc-sub" id="memory-name">—</div></div>
+    <div class="summary-card"><div class="sc-val" style="color:var(--purple)">—</div><div class="sc-label">LEAST NODES</div><div class="sc-sub" id="nodes-name">—</div></div>
+    <div class="summary-card"><div class="sc-val" id="found-count" style="color:var(--safe)">0/8</div><div class="sc-label">PATHS FOUND</div><div class="sc-sub">algorithms succeeded</div></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">EXECUTION TIME</div>
+      <div class="chart-sub">MILLISECONDS — LOWER IS BETTER</div>
+      <div class="chart-wrap"><canvas id="chart-time"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">PATH COST</div>
+      <div class="chart-sub">TOTAL ROUTE COST — LOWER IS BETTER</div>
+      <div class="chart-wrap"><canvas id="chart-cost"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">NODES EXPLORED</div>
+      <div class="chart-sub">SEARCH SPACE TRAVERSED</div>
+      <div class="chart-wrap"><canvas id="chart-nodes"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">MEMORY USAGE</div>
+      <div class="chart-sub">KILOBYTES USED DURING SEARCH</div>
+      <div class="chart-wrap"><canvas id="chart-mem"></canvas></div>
+    </div>
+  </div>
+
+  <!-- RADAR + PERFORMANCE SCORES -->
+  <div class="radar-section">
+    <div class="chart-card">
+      <div class="chart-title">MULTI-METRIC RADAR</div>
+      <div class="chart-sub">NORMALIZED PERFORMANCE ACROSS ALL DIMENSIONS</div>
+      <div class="chart-wrap"><canvas id="chart-radar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">PERFORMANCE SCORES</div>
+      <div class="chart-sub">COMPOSITE SCORE (SPEED + OPTIMALITY + EFFICIENCY)</div>
+      <div id="score-bars" style="padding-top:8px">
+        <div class="loading-state" style="padding:30px">
+          <div class="spinner"></div><br>Run comparison to see scores
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA TABLE -->
+  <div class="table-card">
+    <div class="table-title">DETAILED RESULTS TABLE</div>
+    <div id="table-container">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Click "RUN ALL ALGORITHMS" to generate comparison data</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost:5000';
+
+const ALGO_COLORS = {
+  'BFS':           '#00aaff',
+  'DFS':           '#aa55ff',
+  'Best-First':    '#00ff88',
+  'A*':            '#ffd700',
+  'AO*':           '#ff8800',
+  'Hill Climbing': '#ff55aa',
+  'Minimax':       '#ff2d2d',
+  'Alpha-Beta':    '#00ffff',
+};
+
+const ALGO_NAMES = ['BFS', 'DFS', 'Best-First', 'A*', 'AO*', 'Hill Climbing', 'Minimax', 'Alpha-Beta'];
+let compData = [];
+let charts = {};
+
+function getSizeConfig() {
+  const s = document.getElementById('comp-size').value;
+  if (s === 'small') return { rows: 8, cols: 8 };
+  if (s === 'large') return { rows: 15, cols: 15 };
+  return { rows: 10, cols: 10 };
+}
+
+async function runComparison() {
+  const btn = document.querySelector('.btn-primary');
+  btn.textContent = '⟳ RUNNING...';
+  btn.disabled = true;
+
+  // Generate city first
+  const { rows, cols } = getSizeConfig();
+  const disaster = document.getElementById('comp-disaster').value;
+  
+  try {
+    await fetch(`${API}/generate-city`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ rows, cols, disaster_type: disaster })
+    });
+
+    const res = await fetch(`${API}/compare`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    compData = data.results;
+  } catch(e) {
+    // Generate demo data
+    compData = generateDemoData();
+  }
+
+  btn.textContent = '▶ RUN ALL ALGORITHMS';
+  btn.disabled = false;
+
+  renderAll();
+}
+
+function generateDemoData() {
+  // Realistic demo data for offline mode
+  return [
+    { name: 'BFS',           path_length: 18, cost: 1080, nodes_explored: 87,  time_ms: 0.421, memory_kb: 12.3, found: true,  path: [] },
+    { name: 'DFS',           path_length: 31, cost: 1860, nodes_explored: 45,  time_ms: 0.183, memory_kb: 8.1,  found: true,  path: [] },
+    { name: 'Best-First',    path_length: 16, cost: 980,  nodes_explored: 32,  time_ms: 0.298, memory_kb: 9.4,  found: true,  path: [] },
+    { name: 'A*',            path_length: 15, cost: 910,  nodes_explored: 41,  time_ms: 0.512, memory_kb: 14.2, found: true,  path: [] },
+    { name: 'AO*',           path_length: 15, cost: 920,  nodes_explored: 43,  time_ms: 0.634, memory_kb: 15.1, found: true,  path: [] },
+    { name: 'Hill Climbing', path_length: 19, cost: 1140, nodes_explored: 28,  time_ms: 0.241, memory_kb: 7.2,  found: true,  path: [] },
+    { name: 'Minimax',       path_length: 17, cost: 1020, nodes_explored: 312, time_ms: 8.43,  memory_kb: 82.4, found: true,  path: [] },
+    { name: 'Alpha-Beta',    path_length: 17, cost: 1020, nodes_explored: 128, time_ms: 3.21,  memory_kb: 38.9, found: true,  path: [] },
+  ];
+}
+
+function renderAll() {
+  updateSummaryCards();
+  renderCharts();
+  renderTable();
+  renderScoreBars();
+}
+
+function updateSummaryCards() {
+  const found = compData.filter(d => d.found);
+  if (found.length === 0) return;
+
+  const fastest = found.reduce((a,b) => a.time_ms < b.time_ms ? a : b);
+  const optimal = found.filter(d => d.cost > 0).reduce((a,b) => a.cost < b.cost ? a : b);
+  const leastMem = found.reduce((a,b) => a.memory_kb < b.memory_kb ? a : b);
+  const leastNodes = found.reduce((a,b) => a.nodes_explored < b.nodes_explored ? a : b);
+
+  document.querySelector('#summary-cards .summary-card:nth-child(1) .sc-val').textContent = fastest.time_ms.toFixed(2) + 'ms';
+  document.getElementById('fastest-name').textContent = fastest.name;
+  document.querySelector('#summary-cards .summary-card:nth-child(2) .sc-val').textContent = optimal.cost;
+  document.getElementById('optimal-name').textContent = optimal.name;
+  document.querySelector('#summary-cards .summary-card:nth-child(3) .sc-val').textContent = leastMem.memory_kb.toFixed(1) + 'KB';
+  document.getElementById('memory-name').textContent = leastMem.name;
+  document.querySelector('#summary-cards .summary-card:nth-child(4) .sc-val').textContent = leastNodes.nodes_explored;
+  document.getElementById('nodes-name').textContent = leastNodes.name;
+  document.getElementById('found-count').textContent = `${found.length}/8`;
+}
+
+function makeChartDefaults() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0a1520',
+        borderColor: 'rgba(0,170,255,0.3)',
+        borderWidth: 1,
+        titleColor: '#7a9bb5',
+        bodyColor: '#e8f4ff',
+        titleFont: { family: 'Space Mono', size: 10 },
+        bodyFont: { family: 'Space Mono', size: 11 }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#7a9bb5', font: { family: 'Space Mono', size: 9 } },
+        grid: { color: 'rgba(0,170,255,0.05)' },
+        border: { color: 'rgba(0,170,255,0.1)' }
+      },
+      y: {
+        ticks: { color: '#7a9bb5', font: { family: 'Space Mono', size: 9 } },
+        grid: { color: 'rgba(0,170,255,0.05)' },
+        border: { color: 'rgba(0,170,255,0.1)' }
+      }
+    }
+  };
+}
+
+function renderCharts() {
+  const names = compData.map(d => d.name);
+  const colors = compData.map(d => ALGO_COLORS[d.name] || '#00aaff');
+  const borderColors = colors.map(c => c);
+  const bgColors = colors.map(c => c + '33');
+
+  // Destroy existing
+  Object.values(charts).forEach(c => c.destroy());
+
+  // Time Chart
+  charts.time = new Chart(document.getElementById('chart-time'), {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{ data: compData.map(d => d.time_ms), backgroundColor: bgColors, borderColor: borderColors, borderWidth: 1.5 }]
+    },
+    options: makeChartDefaults()
+  });
+
+  // Cost Chart
+  charts.cost = new Chart(document.getElementById('chart-cost'), {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{ data: compData.map(d => d.cost > 0 ? d.cost : 0), backgroundColor: bgColors, borderColor: borderColors, borderWidth: 1.5 }]
+    },
+    options: makeChartDefaults()
+  });
+
+  // Nodes Chart
+  charts.nodes = new Chart(document.getElementById('chart-nodes'), {
+    type: 'line',
+    data: {
+      labels: names,
+      datasets: [{
+        data: compData.map(d => d.nodes_explored),
+        borderColor: '#00aaff',
+        backgroundColor: 'rgba(0,170,255,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: colors,
+        pointBorderColor: colors,
+        pointRadius: 6
+      }]
+    },
+    options: makeChartDefaults()
+  });
+
+  // Memory Chart
+  charts.mem = new Chart(document.getElementById('chart-mem'), {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{ data: compData.map(d => d.memory_kb), backgroundColor: bgColors, borderColor: borderColors, borderWidth: 1.5 }]
+    },
+    options: makeChartDefaults()
+  });
+
+  // Radar Chart
+  const found = compData.filter(d => d.found);
+  if (found.length === 0) return;
+
+  // Normalize each metric 0-1 (invert time/nodes/mem so higher = better)
+  const maxTime = Math.max(...found.map(d => d.time_ms));
+  const maxNodes = Math.max(...found.map(d => d.nodes_explored));
+  const maxMem = Math.max(...found.map(d => d.memory_kb));
+  const maxCost = Math.max(...found.filter(d => d.cost > 0).map(d => d.cost));
+
+  // Pick top 4 for radar clarity
+  const top4 = found.slice(0, 4);
+
+  charts.radar = new Chart(document.getElementById('chart-radar'), {
+    type: 'radar',
+    data: {
+      labels: ['Speed', 'Path Quality', 'Memory Eff', 'Search Eff', 'Reliability'],
+      datasets: top4.map(d => ({
+        label: d.name,
+        data: [
+          1 - (d.time_ms / maxTime),
+          d.cost > 0 ? 1 - (d.cost / maxCost) : 0,
+          1 - (d.memory_kb / maxMem),
+          1 - (d.nodes_explored / maxNodes),
+          d.found ? 1 : 0
+        ],
+        borderColor: ALGO_COLORS[d.name] || '#00aaff',
+        backgroundColor: (ALGO_COLORS[d.name] || '#00aaff') + '22',
+        pointBackgroundColor: ALGO_COLORS[d.name] || '#00aaff',
+        borderWidth: 2,
+        pointRadius: 4
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: '#7a9bb5',
+            font: { family: 'Space Mono', size: 9 },
+            boxWidth: 10,
+            padding: 12
+          }
+        }
+      },
+      scales: {
+        r: {
+          min: 0, max: 1,
+          ticks: { display: false },
+          grid: { color: 'rgba(0,170,255,0.1)' },
+          angleLines: { color: 'rgba(0,170,255,0.1)' },
+          pointLabels: { color: '#7a9bb5', font: { family: 'Space Mono', size: 9 } }
+        }
+      }
+    }
+  });
+}
+
+function renderScoreBars() {
+  const found = compData.filter(d => d.found);
+  if (!found.length) return;
+
+  // Compute composite score
+  const maxTime = Math.max(...found.map(d => d.time_ms)) || 1;
+  const maxNodes = Math.max(...found.map(d => d.nodes_explored)) || 1;
+  const maxMem = Math.max(...found.map(d => d.memory_kb)) || 1;
+  const maxCost = Math.max(...found.filter(d => d.cost > 0).map(d => d.cost)) || 1;
+
+  const scored = compData.map(d => {
+    if (!d.found) return { ...d, score: 0 };
+    const speedScore = 1 - (d.time_ms / maxTime);
+    const qualScore = d.cost > 0 ? 1 - (d.cost / maxCost) : 0;
+    const memScore = 1 - (d.memory_kb / maxMem);
+    const effScore = 1 - (d.nodes_explored / maxNodes);
+    return { ...d, score: ((speedScore + qualScore + memScore + effScore) / 4) * 100 };
+  }).sort((a, b) => b.score - a.score);
+
+  const html = scored.map((d, i) => `
+    <div class="score-bar">
+      <span class="score-bar-label">${d.name}</span>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" style="width:${d.score}%;background:${ALGO_COLORS[d.name] || '#00aaff'}"></div>
+      </div>
+      <span class="score-bar-val">${d.score.toFixed(0)}${i===0?' 🏆':''}</span>
+    </div>
+  `).join('');
+  document.getElementById('score-bars').innerHTML = html;
+}
+
+function renderTable() {
+  const metric = document.getElementById('sort-metric').value;
+  const sorted = [...compData].sort((a, b) => {
+    if (!a.found) return 1;
+    if (!b.found) return -1;
+    const av = a[metric] === -1 ? Infinity : a[metric];
+    const bv = b[metric] === -1 ? Infinity : b[metric];
+    return av - bv;
+  });
+
+  const found = compData.filter(d => d.found);
+  const minCost = found.length ? Math.min(...found.filter(d => d.cost > 0).map(d => d.cost)) : 0;
+  const minTime = found.length ? Math.min(...found.map(d => d.time_ms)) : 0;
+  const minNodes = found.length ? Math.min(...found.map(d => d.nodes_explored)) : 0;
+  const minMem = found.length ? Math.min(...found.map(d => d.memory_kb)) : 0;
+  const maxCost = found.length ? Math.max(...found.filter(d => d.cost > 0).map(d => d.cost)) : 0;
+
+  const rows = sorted.map((d, i) => {
+    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    const isBestCost = d.cost === minCost && d.found;
+    const isBestTime = Math.abs(d.time_ms - minTime) < 0.001;
+    const isBestNodes = d.nodes_explored === minNodes;
+    const isBestMem = Math.abs(d.memory_kb - minMem) < 0.1;
+
+    // Determine type badge
+    let typeBadge = '';
+    if (['BFS','DFS'].includes(d.name)) typeBadge = '<span class="badge badge-blue">UNINFORMED</span>';
+    else if (['Best-First','A*'].includes(d.name)) typeBadge = '<span class="badge badge-green">INFORMED</span>';
+    else if (['AO*','Hill Climbing'].includes(d.name)) typeBadge = '<span class="badge badge-yellow">ADVANCED</span>';
+    else typeBadge = '<span class="badge badge-red">ADVERSARIAL</span>';
+
+    return `<tr>
+      <td><span class="rank ${rankClass}">${i+1}</span></td>
+      <td style="font-weight:700;color:${ALGO_COLORS[d.name]||'#e8f4ff'}">${d.name}</td>
+      <td>${typeBadge}</td>
+      <td><span class="badge ${d.found ? 'badge-green' : 'badge-red'}">${d.found ? 'FOUND' : 'FAILED'}</span></td>
+      <td class="${isBestCost ? 'best-cell' : ''}">${d.cost > 0 ? d.cost.toFixed(1) : '∞'}${isBestCost ? ' ★' : ''}</td>
+      <td>${d.path_length || 0}</td>
+      <td class="${isBestNodes ? 'best-cell' : ''}">${d.nodes_explored}${isBestNodes ? ' ★' : ''}</td>
+      <td class="${isBestTime ? 'best-cell' : ''}">${d.time_ms.toFixed(3)} ms${isBestTime ? ' ★' : ''}</td>
+      <td class="${isBestMem ? 'best-cell' : ''}">${d.memory_kb.toFixed(1)} KB${isBestMem ? ' ★' : ''}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('table-container').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>ALGORITHM</th>
+          <th>TYPE</th>
+          <th>STATUS</th>
+          <th>PATH COST</th>
+          <th>PATH LEN</th>
+          <th>NODES EXP</th>
+          <th>TIME</th>
+          <th>MEMORY</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="margin-top:12px;font-family:'Space Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px">
+      ★ = BEST IN CATEGORY &nbsp;|&nbsp; Lower cost/time/nodes/memory = better
+    </div>
+  `;
+}
+
+function sortTable() { if (compData.length) renderTable(); }
+
+function onSizeChange() { /* config only */ }
+
+function exportData() {
+  if (!compData.length) { alert('Run comparison first'); return; }
+  const headers = ['Algorithm','Found','Cost','PathLen','Nodes','Time_ms','Memory_KB'];
+  const rows = compData.map(d =>
+    [d.name, d.found, d.cost, d.path_length, d.nodes_explored, d.time_ms, d.memory_kb].join(',')
+  );
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `algorithm_comparison_${Date.now()}.csv`;
+  a.click();
+}
+
+// Auto-run with demo data on load
+setTimeout(() => {
+  compData = generateDemoData();
+  renderAll();
+}, 300);
+</script>
+</body>
+</html>
