@@ -1,1 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVAC.AI — Disaster Evacuation Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --danger: #ff2d2d;
+    --danger-glow: rgba(255,45,45,0.4);
+    --safe: #00ff88;
+    --safe-dim: rgba(0,255,136,0.15);
+    --warning: #ffaa00;
+    --path: #00aaff;
+    --bg: #050a0f;
+    --surface: #0a1520;
+    --surface2: #0f1e2d;
+    --border: rgba(0,170,255,0.2);
+    --text: #e8f4ff;
+    --text-dim: #7a9bb5;
+    --grid-color: rgba(0,170,255,0.04);
+  }
 
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+    animation: gridShift 20s linear infinite;
+  }
+
+  @keyframes gridShift {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+  }
+
+  /* Noise overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ─── NAVBAR ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 40px;
+    background: rgba(5,10,15,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--danger);
+    text-shadow: 0 0 20px var(--danger-glow);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--safe);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--safe);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--path);
+    border-color: var(--border);
+    background: rgba(0,170,255,0.05);
+  }
+
+  .nav-links a.active {
+    color: var(--path);
+    border-color: var(--path);
+    background: rgba(0,170,255,0.1);
+  }
+
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 8px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--warning);
+    color: var(--warning);
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 40px 80px;
+    text-align: center;
+  }
+
+  .alert-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,45,45,0.08);
+    border: 1px solid rgba(255,45,45,0.3);
+    border-radius: 2px;
+    padding: 8px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--danger);
+    margin-bottom: 40px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .alert-banner::before {
+    content: '⚠';
+    animation: blink 1.5s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(72px, 12vw, 160px);
+    line-height: 0.9;
+    letter-spacing: 6px;
+    margin-bottom: 16px;
+    animation: fadeUp 1s ease 0.2s both;
+  }
+
+  .hero-title .line1 { color: var(--text); display: block; }
+  .hero-title .line2 {
+    color: transparent;
+    -webkit-text-stroke: 1px var(--danger);
+    display: block;
+    text-shadow: none;
+  }
+  .hero-title .line3 {
+    color: var(--path);
+    display: block;
+    text-shadow: 0 0 60px rgba(0,170,255,0.3);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 600px;
+    line-height: 1.8;
+    margin-bottom: 50px;
+    animation: fadeUp 1s ease 0.4s both;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  .hero-sub strong {
+    color: var(--safe);
+    font-weight: 600;
+  }
+
+  .cta-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 1s ease 0.6s both;
+  }
+
+  .btn-primary {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 16px 36px;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+    box-shadow: 0 0 30px var(--danger-glow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.4s;
+  }
+
+  .btn-primary:hover::after { transform: translateX(100%); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px var(--danger-glow); }
+
+  .btn-secondary {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 16px 36px;
+    background: transparent;
+    color: var(--path);
+    border: 1px solid var(--path);
+    border-radius: 2px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(0,170,255,0.1);
+    transform: translateY(-2px);
+  }
+
+  /* ─── STATS BAR ─── */
+  .stats-bar {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin: 0 40px 80px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: fadeUp 1s ease 0.8s both;
+  }
+
+  .stat {
+    flex: 1;
+    max-width: 220px;
+    padding: 24px 32px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .stat-val.red { color: var(--danger); text-shadow: 0 0 20px var(--danger-glow); }
+  .stat-val.green { color: var(--safe); text-shadow: 0 0 20px rgba(0,255,136,0.3); }
+  .stat-val.blue { color: var(--path); text-shadow: 0 0 20px rgba(0,170,255,0.3); }
+  .stat-val.yellow { color: var(--warning); }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* ─── ALGORITHMS SECTION ─── */
+  .section {
+    position: relative;
+    z-index: 2;
+    padding: 80px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .section-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--danger);
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+
+  .algo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .algo-card {
+    background: var(--surface);
+    padding: 28px;
+    transition: all 0.25s;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .algo-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--card-accent, var(--path));
+    transform: scaleY(0);
+    transition: transform 0.25s;
+    transform-origin: bottom;
+  }
+
+  .algo-card:hover {
+    background: var(--surface2);
+    transform: translateY(-2px);
+  }
+
+  .algo-card:hover::before {
+    transform: scaleY(1);
+  }
+
+  .algo-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: rgba(255,255,255,0.04);
+    position: absolute;
+    right: 16px;
+    top: 8px;
+    line-height: 1;
+  }
+
+  .algo-type {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.6;
+  }
+
+  .algo-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  .algo-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .algo-badge {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  /* ─── FEATURES ─── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    transition: border-color 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(0,170,255,0.4);
+  }
+
+  .feature-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .feature-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  .feature-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  /* ─── DISASTER TYPES ─── */
+  .disaster-strip {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    overflow: hidden;
+    height: 60px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  .disaster-ticker {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    white-space: nowrap;
+    animation: ticker 20s linear infinite;
+    padding: 0 20px;
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .ticker-item {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ticker-item.alert { color: var(--danger); }
+  .ticker-item.safe { color: var(--safe); }
+
+  /* ─── VISUALIZATION PREVIEW ─── */
+  .viz-preview {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px 80px;
+  }
+
+  .city-preview-canvas {
+    width: 100%;
+    height: 360px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #preview-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    position: relative;
+    z-index: 2;
+    border-top: 1px solid var(--border);
+    padding: 32px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* Light mode */
+  body.light-mode {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #e8f0f8;
+    --border: rgba(0,80,160,0.15);
+    --text: #0a1520;
+    --text-dim: #4a6080;
+    --grid-color: rgba(0,80,160,0.04);
+  }
+
+  /* ─── SCROLL ANIMATIONS ─── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Color assignments */
+  [data-type="uninformed"] { --card-accent: var(--path); }
+  [data-type="uninformed"] .algo-type { color: var(--path); }
+  [data-type="uninformed"] .algo-badge { background: rgba(0,170,255,0.1); color: var(--path); border: 1px solid rgba(0,170,255,0.3); }
+
+  [data-type="informed"] { --card-accent: var(--safe); }
+  [data-type="informed"] .algo-type { color: var(--safe); }
+  [data-type="informed"] .algo-badge { background: rgba(0,255,136,0.1); color: var(--safe); border: 1px solid rgba(0,255,136,0.3); }
+
+  [data-type="advanced"] { --card-accent: var(--warning); }
+  [data-type="advanced"] .algo-type { color: var(--warning); }
+  [data-type="advanced"] .algo-badge { background: rgba(255,170,0,0.1); color: var(--warning); border: 1px solid rgba(255,170,0,0.3); }
+
+  [data-type="adversarial"] { --card-accent: var(--danger); }
+  [data-type="adversarial"] .algo-type { color: var(--danger); }
+  [data-type="adversarial"] .algo-badge { background: rgba(255,45,45,0.1); color: var(--danger); border: 1px solid rgba(255,45,45,0.3); }
+</style>
+</head>
+<body>
+
+<!-- ─── NAVBAR ─── -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    EVAC.AI
+  </div>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">HOME</a></li>
+    <li><a href="dashboard.html">DASHBOARD</a></li>
+    <li><a href="comparison.html">COMPARE</a></li>
+  </ul>
+  <button class="theme-toggle" onclick="toggleTheme()">◐ THEME</button>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="alert-banner">EMERGENCY RESPONSE SYSTEM ACTIVE</div>
+  
+  <h1 class="hero-title">
+    <span class="line1">DISASTER</span>
+    <span class="line2">EVAC</span>
+    <span class="line3">SYSTEM</span>
+  </h1>
+  
+  <p class="hero-sub">
+    An intelligent city evacuation planner powered by <strong>8 search algorithms</strong>.<br>
+    Simulates fire, flood, and earthquake scenarios with real-time pathfinding,<br>
+    adversarial disaster modelling, and <strong>optimal route selection</strong>.
+  </p>
+
+  <div class="cta-group">
+    <a href="dashboard.html" class="btn-primary">▶ LAUNCH SIMULATION</a>
+    <a href="comparison.html" class="btn-secondary">≡ COMPARE ALGORITHMS</a>
+  </div>
+</section>
+
+<!-- ─── STATS ─── -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-val red" id="stat-algos">8</div>
+    <div class="stat-label">Search Algorithms</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val green">3</div>
+    <div class="stat-label">Disaster Types</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val blue">400</div>
+    <div class="stat-label">Max City Nodes</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val yellow">∞</div>
+    <div class="stat-label">Simulations</div>
+  </div>
+</div>
+
+<!-- ─── TICKER ─── -->
+<div class="disaster-strip">
+  <div class="disaster-ticker">
+    <span class="ticker-item alert">🔥 FIRE SPREADING — SECTOR 3</span>
+    <span class="ticker-item">— BFS ROUTE CALCULATED: 12 NODES —</span>
+    <span class="ticker-item safe">✓ SHELTER ALPHA ACCESSIBLE</span>
+    <span class="ticker-item">— A* OPTIMAL PATH: COST 142.5 —</span>
+    <span class="ticker-item alert">🌊 FLOOD WARNING — SOUTH DISTRICT</span>
+    <span class="ticker-item">— ALPHA-BETA PRUNING: 34% EFFICIENCY GAIN —</span>
+    <span class="ticker-item safe">✓ EVACUATION ROUTE FOUND</span>
+    <span class="ticker-item alert">⚡ EARTHQUAKE — ROAD BLOCKED: NODE 47</span>
+    <!-- duplicate for seamless loop -->
+    <span class="ticker-item alert">🔥 FIRE SPREADING — SECTOR 3</span>
+    <span class="ticker-item">— BFS ROUTE CALCULATED: 12 NODES —</span>
+    <span class="ticker-item safe">✓ SHELTER ALPHA ACCESSIBLE</span>
+    <span class="ticker-item">— A* OPTIMAL PATH: COST 142.5 —</span>
+  </div>
+</div>
+
+<!-- ─── PREVIEW CANVAS ─── -->
+<div class="viz-preview">
+  <div class="city-preview-canvas">
+    <canvas id="preview-canvas"></canvas>
+  </div>
+</div>
+
+<!-- ─── ALGORITHMS ─── -->
+<div class="section reveal">
+  <div class="section-header">
+    <span class="section-tag">// CORE ENGINE</span>
+    <h2 class="section-title">ALL 8 ALGORITHMS</h2>
+  </div>
+
+  <div class="algo-grid">
+    <div class="algo-card" data-type="uninformed">
+      <span class="algo-num">01</span>
+      <div class="algo-type">Uninformed Search</div>
+      <div class="algo-name">BREADTH-FIRST SEARCH</div>
+      <div class="algo-desc">Explores all nodes level-by-level. Guarantees shortest path in unweighted graphs. Ideal for equal-weight evacuation grids.</div>
+      <span class="algo-badge">O(V+E)</span>
+    </div>
+    <div class="algo-card" data-type="uninformed">
+      <span class="algo-num">02</span>
+      <div class="algo-type">Uninformed Search</div>
+      <div class="algo-name">DEPTH-FIRST SEARCH</div>
+      <div class="algo-desc">Dives deep along one path before backtracking. Supports depth limits. Useful for deep city exploration with limited memory.</div>
+      <span class="algo-badge">O(V+E)</span>
+    </div>
+    <div class="algo-card" data-type="informed">
+      <span class="algo-num">03</span>
+      <div class="algo-type">Informed Search</div>
+      <div class="algo-name">BEST-FIRST SEARCH</div>
+      <div class="algo-desc">Greedy search guided by heuristic h(n) = distance + risk penalty. Fast but not always optimal. Great for time-critical evacuations.</div>
+      <span class="algo-badge">O(V log V)</span>
+    </div>
+    <div class="algo-card" data-type="informed">
+      <span class="algo-num">04</span>
+      <div class="algo-name">A* SEARCH</div>
+      <div class="algo-type">Informed Search</div>
+      <div class="algo-desc">Gold standard: f(n) = g(n) + h(n). Optimal and complete with admissible heuristic. Balances cost and risk perfectly.</div>
+      <span class="algo-badge">OPTIMAL</span>
+    </div>
+    <div class="algo-card" data-type="advanced">
+      <span class="algo-num">05</span>
+      <div class="algo-type">Advanced Search</div>
+      <div class="algo-name">AO* SEARCH</div>
+      <div class="algo-desc">AND-OR graph search for multi-goal evacuation. Handles scenarios where multiple shelters must ALL be reached (injured + main group).</div>
+      <span class="algo-badge">MULTI-GOAL</span>
+    </div>
+    <div class="algo-card" data-type="advanced">
+      <span class="algo-num">06</span>
+      <div class="algo-type">Advanced Search</div>
+      <div class="algo-name">HILL CLIMBING</div>
+      <div class="algo-desc">Local optimization with random restarts. Greedily improves current path. Fast for large maps, with steepest-ascent variant.</div>
+      <span class="algo-badge">LOCAL OPT</span>
+    </div>
+    <div class="algo-card" data-type="adversarial">
+      <span class="algo-num">07</span>
+      <div class="algo-type">Adversarial Search</div>
+      <div class="algo-name">MINIMAX</div>
+      <div class="algo-desc">Models disaster (MIN) vs. human (MAX) decisions. Prepares the safest route assuming the disaster will act against you at every step.</div>
+      <span class="algo-badge">O(b^d)</span>
+    </div>
+    <div class="algo-card" data-type="adversarial">
+      <span class="algo-num">08</span>
+      <div class="algo-type">Adversarial Search</div>
+      <div class="algo-name">ALPHA-BETA PRUNING</div>
+      <div class="algo-desc">Minimax with intelligent branch pruning. Achieves same result as Minimax in up to O(b^(d/2)) — dramatically faster game-tree search.</div>
+      <span class="algo-badge">PRUNED</span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── FEATURES ─── -->
+<div class="section reveal">
+  <div class="section-header">
+    <span class="section-tag">// CAPABILITIES</span>
+    <h2 class="section-title">KEY FEATURES</h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🗺️</div>
+      <div class="feature-title">DYNAMIC CITY MODEL</div>
+      <div class="feature-desc">Graph-based city with 5×5 to 20×20 grids. Nodes carry risk level, congestion, and type. Edges update in real-time as disaster spreads.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">ALGORITHM COMPARISON</div>
+      <div class="feature-desc">Side-by-side comparison of all 8 algorithms on path optimality, execution time, memory usage, and nodes explored. Visualized with Chart.js.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔥</div>
+      <div class="feature-title">DISASTER SIMULATION</div>
+      <div class="feature-desc">Fire spreading, flood rising, earthquake damage — all modelled dynamically. Routes recalculate automatically as conditions change.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-title">AI SUGGESTIONS</div>
+      <div class="feature-desc">The system analyzes your city scenario and recommends the best algorithm based on city size, disaster intensity, and number of targets.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎛️</div>
+      <div class="feature-title">PARAMETER TUNING</div>
+      <div class="feature-desc">Adjust heuristic weight for A*, depth limit for DFS, iteration count for Hill Climbing. See real-time impact on performance metrics.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📥</div>
+      <div class="feature-title">EXPORT RESULTS</div>
+      <div class="feature-desc">Export simulation results as JSON or generate a PDF report with path details, performance metrics, and algorithm comparison charts.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-text">EVAC.AI — Disaster Evacuation Intelligence System</div>
+  <div class="footer-text">BFS · DFS · BEST-FIRST · A* · AO* · HILL CLIMBING · MINIMAX · ALPHA-BETA</div>
+</footer>
+
+<script>
+// ─── THEME TOGGLE ───
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+}
+if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode');
+
+// ─── SCROLL REVEAL ───
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ─── ANIMATED CITY PREVIEW ───
+const canvas = document.getElementById('preview-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); drawCity(); });
+
+const COLS = 14, ROWS = 6;
+const nodes = [];
+let animFrame = 0;
+let animPath = [];
+let pathProgress = 0;
+
+// Generate preview city
+function initCity() {
+  nodes.length = 0;
+  const padX = 40, padY = 40;
+  const W = canvas.width - padX * 2;
+  const H = canvas.height - padY * 2;
+  
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = padX + (c / (COLS-1)) * W;
+      const y = padY + (r / (ROWS-1)) * H;
+      let type = 'normal';
+      let risk = 0;
+      
+      // Fire zone
+      if (r >= 1 && r <= 3 && c >= 2 && c <= 5) {
+        risk = Math.random() * 0.8 + 0.2;
+        type = risk > 0.6 ? 'danger' : 'risk';
+      }
+      // Shelters
+      if ((r === 0 && c === COLS-1) || (r === ROWS-1 && c === COLS-1) || (r === 2 && c === COLS-1)) {
+        type = 'shelter';
+        risk = 0;
+      }
+      
+      nodes.push({ x, y, type, risk, r, c, explored: false, inPath: false });
+    }
+  }
+  
+  // Build animated path (simplified demo)
+  animPath = [];
+  let cur = nodes[2 * COLS + 0]; // Start left
+  animPath.push(cur);
+  // Navigate around danger zone
+  const waypoints = [
+    nodes[1 * COLS + 0], nodes[0 * COLS + 1], nodes[0 * COLS + 4],
+    nodes[0 * COLS + 7], nodes[1 * COLS + 9], nodes[2 * COLS + COLS-1]
+  ];
+  animPath.push(...waypoints);
+}
+
+function drawCity() {
+  if (!canvas.width) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Background
+  ctx.fillStyle = '#0a1520';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw edges
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      const n = nodes[idx];
+      if (!n) continue;
+      
+      if (c + 1 < COLS) {
+        const n2 = nodes[idx + 1];
+        ctx.strokeStyle = 'rgba(0,170,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(n2.x, n2.y);
+        ctx.stroke();
+      }
+      if (r + 1 < ROWS) {
+        const n2 = nodes[idx + COLS];
+        ctx.strokeStyle = 'rgba(0,170,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(n2.x, n2.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw animated path edges
+  const progress = Math.min(pathProgress, animPath.length - 1);
+  for (let i = 0; i < progress - 1; i++) {
+    ctx.strokeStyle = 'rgba(0,170,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00aaff';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(animPath[i].x, animPath[i].y);
+    ctx.lineTo(animPath[i+1].x, animPath[i+1].y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw nodes
+  nodes.forEach((n, i) => {
+    let color, size = 5, glow = 0;
+    
+    if (n.type === 'danger') {
+      color = '#ff2d2d';
+      glow = 8 + Math.sin(animFrame * 0.05 + i) * 3;
+    } else if (n.type === 'risk') {
+      color = `rgba(255, ${Math.floor(170 - n.risk * 120)}, 0, 0.8)`;
+    } else if (n.type === 'shelter') {
+      color = '#00ff88';
+      size = 8;
+      glow = 12;
+    } else {
+      color = 'rgba(0,170,255,0.3)';
+    }
+
+    // Highlight path nodes
+    const pathIdx = animPath.findIndex(p => p === n);
+    if (pathIdx >= 0 && pathIdx < pathProgress) {
+      color = '#00aaff';
+      size = 6;
+      glow = 10;
+    }
+
+    if (glow > 0) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = glow;
+    }
+    
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Shelter label
+    if (n.type === 'shelter') {
+      ctx.fillStyle = '#00ff88';
+      ctx.font = 'bold 9px Space Mono, monospace';
+      ctx.fillText('SAFE', n.x + 10, n.y + 4);
+    }
+  });
+
+  // Start marker
+  const startNode = nodes[2 * COLS];
+  if (startNode) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px Space Mono, monospace';
+    ctx.fillText('START', startNode.x + 8, startNode.y - 8);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(startNode.x, startNode.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Legend
+  const legends = [
+    { color: '#ff2d2d', label: 'DANGER ZONE' },
+    { color: '#00ff88', label: 'SHELTER' },
+    { color: '#00aaff', label: 'EVAC ROUTE' },
+    { color: 'rgba(0,170,255,0.3)', label: 'NORMAL' },
+  ];
+  legends.forEach((l, i) => {
+    ctx.fillStyle = l.color;
+    ctx.beginPath();
+    ctx.arc(20 + i * 120, canvas.height - 20, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(120,160,200,0.7)';
+    ctx.font = '9px monospace';
+    ctx.fillText(l.label, 30 + i * 120, canvas.height - 16);
+  });
+}
+
+function animate() {
+  animFrame++;
+  // Slowly animate path progress
+  if (animFrame % 8 === 0 && pathProgress < animPath.length) {
+    pathProgress += 0.5;
+  }
+  // Reset and replay
+  if (pathProgress > animPath.length + 20) {
+    pathProgress = 0;
+  }
+  drawCity();
+  requestAnimationFrame(animate);
+}
+
+initCity();
+animate();
+</script>
+</body>
+</html>
